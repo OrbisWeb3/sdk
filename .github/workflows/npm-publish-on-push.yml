@@ -11,6 +11,9 @@ jobs:
         with:
           node-version: "18"
       - run: npm ci
+      - run: npm run build
       - uses: JS-DevTools/npm-publish@v2
         with:
+          access: "public"
+          provenance: true
           token: ${{ secrets.NPM_TOKEN }}
