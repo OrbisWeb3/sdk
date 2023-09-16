@@ -1,0 +1,48 @@
+import { SupabaseClient, createClient } from "@supabase/supabase-js";
+import { MethodStatuses } from "../types/results.js";
+
+export class OrbisNodeClient {
+  #client: SupabaseClient;
+  #host: string;
+  #api: string;
+
+  constructor({ api, host, key }: { api: string; host: string; key: string }) {
+    this.#host = host.replace(/\/$/, "");
+    this.#api = api;
+    this.#client = createClient(this.#host, key);
+  }
+
+  get client(): SupabaseClient {
+    return this.#client;
+  }
+
+  async priorityIndex({
+    resource,
+  }: {
+    resource: { id: string; type: "profile" | "document" };
+  }) {
+    const url = `${this.#api}/index-${
+      resource.type === "profile" ? "orbis-did" : "stream/mainnet"
+    }/${resource.id}`;
+    try {
+      const result = await fetch(url);
+      return {
+        status: MethodStatuses.ok,
+        ...(await result.json()),
+      };
+    } catch (e) {
+      return {
+        status: MethodStatuses.genericError,
+        error: e,
+      };
+    }
+  }
+
+  async priorityIndexDocument({ id }: { id: string }) {
+    return this.priorityIndex({ resource: { type: "document", id } });
+  }
+
+  async priorityIndexProfile({ did }: { did: string }) {
+    return this.priorityIndex({ resource: { type: "profile", id: did } });
+  }
+}
