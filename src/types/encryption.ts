@@ -54,9 +54,14 @@ export type OrbisEncryptionRules =
 /**
  *
  * Encryption Interface (Lit)
- * TODO: If we add another client make "client" mandatory to identify encryptionClient
+ * TODO: If we add another client make "client" mandatory to identify encryptionClient (default to Lit)
  *
  */
+
+type FileContentMetadata = {
+  name: string;
+  type: string;
+};
 
 export type OrbisEncryptionClients = "lit"; // | otherClient
 
@@ -67,6 +72,7 @@ export type IndexedEncryptedString = {
   accessControlConditions?: string;
   solRpcConditions?: string;
   unifiedControlConditions?: string;
+  contentMetadata?: FileContentMetadata;
 };
 
 export type EncryptStringParams = {
@@ -96,10 +102,7 @@ export type EncryptedString = {
 };
 
 export type EncryptedFile = EncryptedString & {
-  contentMetadata: {
-    name: string;
-    type: string;
-  };
+  contentMetadata: FileContentMetadata;
 };
 
 export type DecryptedString = {

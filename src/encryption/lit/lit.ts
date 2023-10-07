@@ -45,7 +45,10 @@ export class LitEncryptionClient implements IOrbisEncryptionClient {
   }
 
   async connect() {
-    if (this.#client) return;
+    if (this.#client) {
+      return;
+    }
+
     const client = new LitNodeClient({
       alertWhenUnauthorized: false,
       debug: false,
@@ -113,9 +116,13 @@ export class LitEncryptionClient implements IOrbisEncryptionClient {
   }): Promise<void> {
     const _session = LitSession.fromSession(session);
 
-    if (
-      _session.address.toLowerCase() !== user.metadata.address.toLowerCase()
-    ) {
+    // In case of EVM it's safe to ignore checksum
+    const addressMatch =
+      _session.chain === SupportedChains.ethereum
+        ? _session.address.toLowerCase() === user.metadata.address.toLowerCase()
+        : _session.address === user.metadata.address;
+
+    if (!addressMatch) {
       this.clearSession();
       throw new OrbisError("[Encryption:Lit] Session address mismatch", {
         session: _session,
@@ -172,6 +179,7 @@ export class LitEncryptionClient implements IOrbisEncryptionClient {
     return {
       encryptedContent: await blobToBase64(encryptedString),
       encryptionMetadata: {
+        client: "lit",
         encryptedSymmetricKey: uint8arrayToString(
           encryptedSymmetricKey,
           "base16"
@@ -263,6 +271,7 @@ export class LitEncryptionClient implements IOrbisEncryptionClient {
     return {
       encryptedContent: await blobToBase64(encryptedFile),
       encryptionMetadata: {
+        client: "lit",
         encryptedSymmetricKey: uint8arrayToString(
           encryptedSymmetricKey,
           "base16"

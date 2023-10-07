@@ -1,14 +1,16 @@
 import {
+  EncryptedFile,
   EncryptedString,
   IndexedEncryptedString,
 } from "../types/encryption.js";
 
-export const parseIndexedEncryptedString = (
+export const parseIndexedEncryptedContent = (
   encryptedContent: IndexedEncryptedString
-): EncryptedString => {
+): EncryptedString | EncryptedFile => {
   return {
     encryptedContent: encryptedContent?.encryptedString as string,
     encryptionMetadata: {
+      client: encryptedContent.client,
       encryptedSymmetricKey: encryptedContent?.encryptedSymmetricKey as string,
       evmEncryptionRules:
         encryptedContent?.accessControlConditions &&
@@ -20,16 +22,22 @@ export const parseIndexedEncryptedString = (
         encryptedContent?.unifiedControlConditions &&
         JSON.parse(encryptedContent.unifiedControlConditions as string),
     },
+    contentMetadata: encryptedContent.contentMetadata,
   };
 };
 
-export const serializeEncryptedString = (
-  encryptedContent: EncryptedString
+export const serializeEncryptedContent = (
+  encryptedContent: EncryptedString | EncryptedFile
 ): IndexedEncryptedString => {
   const { encryptedContent: encryptedString, encryptionMetadata: metadata } =
     encryptedContent;
 
   return {
+    client: metadata.client,
+    ...(("contentMetadata" in encryptedContent && {
+      contentMetadata: encryptedContent.contentMetadata,
+    }) ||
+      {}),
     encryptedString,
     encryptedSymmetricKey: metadata.encryptedSymmetricKey,
     ...(metadata.solEncryptionRules

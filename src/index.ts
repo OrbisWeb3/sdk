@@ -59,8 +59,8 @@ import {
 import { didToAddress } from "./util/common.js";
 import { catchError } from "./util/tryit.js";
 import {
-  parseIndexedEncryptedString,
-  serializeEncryptedString,
+  parseIndexedEncryptedContent,
+  serializeEncryptedContent,
 } from "./util/encryption.js";
 
 import {
@@ -77,7 +77,7 @@ export class Orbis {
 
   readonly node: OrbisNodeClient;
   readonly storage: IOrbisStorage;
-  encryption: IOrbisEncryptionClient | false = false;
+  encryption?: IOrbisEncryptionClient;
   user?: AuthUserInformation;
 
   constructor(config: OrbisConfig = defaultConfig) {
@@ -115,16 +115,34 @@ export class Orbis {
     );
   }
 
+  setEncryptionClient(encryption: OrbisConfig["encryption"]): void {
+    if (encryption === false) {
+      delete this.encryption;
+      return;
+    }
+
+    if (encryption === true || encryption === "lit") {
+      this.encryption = new LitEncryptionClient();
+      return;
+    }
+
+    throw new OrbisError("Unknown encryption configuration.", { encryption });
+  }
+
   /**
    * Session
    */
 
   requireSession(scopes?: Array<OrbisResources>) {
-    if (!this.user)
+    if (!this.user) {
       throw new OrbisError(
         "This method requires user authentication, no active user session found."
       );
-    if (!scopes || !scopes.length) return;
+    }
+
+    if (!scopes || !scopes.length) {
+      return;
+    }
 
     if (scopes.includes(OrbisResources.storage)) {
       if (!this.storage.session) {
@@ -182,36 +200,46 @@ export class Orbis {
     const { auth: authenticator } = params;
     const userInformation = await authenticator.getUserInformation();
 
-    if (!(await this.storage.assertCurrentUser(userInformation))) {
+    const storage = this.storage as IAuthenticatedCeramicResource;
+    if (!(await storage.assertCurrentUser(userInformation))) {
       if (scopes.includes(OrbisResources.storage)) {
-        await (this.storage as IAuthenticatedCeramicResource).authorize({
-          authenticator,
-          siwxOverwrites,
-        });
+        await storage.authorize({ authenticator, siwxOverwrites });
       } else {
         console.warn("Resetting storage sessions, user mismatch", {
           current: this.storage.user,
           new: userInformation,
         });
-        this.storage.clearSession();
+
+        storage.clearSession();
       }
     }
 
-    if (
-      this.encryption &&
-      !(await this.encryption.assertCurrentUser(userInformation))
-    ) {
-      if (
-        scopes.includes(OrbisResources.encryption) &&
-        "authenticateSiwx" in authenticator
-      ) {
-        await this.encryption.authorize({ authenticator, siwxOverwrites });
-      } else {
-        console.warn(
-          "Resetting encryption sessions, user mismatch or unsupported authenticator",
-          { current: this.encryption.user, new: userInformation }
+    const encryption = this.encryption ? this.encryption : false;
+    if (encryption) {
+      if (!(await encryption.assertCurrentUser(userInformation))) {
+        if (scopes.includes(OrbisResources.encryption)) {
+          if ("authenticateSiwx" in authenticator) {
+            await encryption.authorize({ authenticator, siwxOverwrites });
+          } else {
+            throw new OrbisError(
+              "Encryption scope requires an authenticator with SIWX signing capabilities.",
+              { authenticator, scopes }
+            );
+          }
+        } else {
+          console.warn(
+            "Resetting encryption sessions, user mismatch or unsupported authenticator",
+            { current: encryption.user, new: userInformation }
+          );
+          await encryption.clearSession();
+        }
+      }
+    } else {
+      if (scopes.includes(OrbisResources.encryption)) {
+        throw new OrbisError(
+          "Encryption scope provided, but no encryption client found.",
+          { scopes, encryption }
         );
-        await this.encryption.clearSession();
       }
     }
 
@@ -219,10 +247,11 @@ export class Orbis {
     const successfulScopes = Object.entries(successfulSessions)
       .map(([k, v]) => v && k)
       .filter((v) => v) as Array<string>;
+
     if (!successfulScopes.length) {
       throw new OrbisError(
         "No sessions created after authentication attempts.",
-        { sessions: successfulSessions }
+        { sessions: successfulSessions, scopes }
       );
     }
 
@@ -254,10 +283,14 @@ export class Orbis {
   }
 
   async isUserConnected(): Promise<boolean> {
-    if (this.user) return true;
+    if (this.user) {
+      return true;
+    }
 
     const session = await this.#store.getItem(LOCALSTORAGE_KEYS.session);
-    if (!session) return false;
+    if (!session) {
+      return false;
+    }
 
     const [parsed, err] = await catchError(() => JSON.parse(session));
     if (err) {
@@ -271,6 +304,7 @@ export class Orbis {
         ? JSON.parse(parsed.userInformation)
         : parsed.userInformation
     ) as AuthUserInformation;
+
     if (!user) {
       this.#store.removeItem(LOCALSTORAGE_KEYS.session);
       console.warn("Unable to parse user information from a saved session.");
@@ -285,6 +319,7 @@ export class Orbis {
           session: storageSession[this.storage.id],
         })
       );
+
       if (err) console.warn(err);
     }
 
@@ -299,6 +334,7 @@ export class Orbis {
               session: encryptionSession[this.encryption.id],
             })
         );
+
         if (err) console.warn(err);
       }
     }
@@ -323,7 +359,9 @@ export class Orbis {
   }
 
   async getConnectedUser(): Promise<OrbisConnectResult | false> {
-    if (!(await this.isUserConnected())) return false;
+    if (!(await this.isUserConnected())) {
+      return false;
+    }
 
     if (this.user)
       return {
@@ -364,7 +402,9 @@ export class Orbis {
 
   async setProfileEmail(email: string) {
     this.requireSession([OrbisResources.encryption, OrbisResources.storage]);
-    if (!email) throw new OrbisError("Email can't be empty.", { email });
+    if (!email) {
+      throw new OrbisError("Email can't be empty.", { email });
+    }
 
     const encryptedEmail = await (
       this.encryption as IOrbisEncryptionClient
@@ -379,7 +419,7 @@ export class Orbis {
     });
 
     const formatEncryptedEmail: SocialEncryptedEmail = {
-      encryptedEmail: serializeEncryptedString(encryptedEmail),
+      encryptedEmail: serializeEncryptedContent(encryptedEmail),
     };
 
     const { id } = await this.storage.createDocument({
@@ -405,6 +445,7 @@ export class Orbis {
       .select()
       .ilike("did", did)
       .single();
+
     if (error || !data) {
       throw new OrbisError(`Error fetching profile (${did}).`, {
         error,
@@ -427,6 +468,7 @@ export class Orbis {
       .from("orbis_v_profiles")
       .select()
       .ilike("address", address);
+
     if (error || !data) {
       throw new OrbisError(`Error fetching DIDs for wallet (${address}).`, {
         error,
@@ -435,7 +477,7 @@ export class Orbis {
       });
     }
 
-    return data.map((v) => formatProfile(v));
+    return data.map((v: any) => formatProfile(v));
   }
 
   async getProfilesByUsername(
@@ -447,6 +489,7 @@ export class Orbis {
       .ilike("username", `${username}%`)
       .range(0, 10)
       .order("timestamp", { ascending: false });
+
     if (error || !data) {
       throw new OrbisError(
         `Error fetching profiles for given username (${username}).`,
@@ -454,7 +497,7 @@ export class Orbis {
       );
     }
 
-    return data.map((v) => formatProfile(v));
+    return data.map((v: any) => formatProfile(v));
   }
 
   async getCredentials(
@@ -487,7 +530,9 @@ export class Orbis {
 
   async follow(did: DIDPkh) {
     this.requireSession([OrbisResources.storage]);
-    if (!did) throw new OrbisError("Missing Profile did to follow.");
+    if (!did) {
+      throw new OrbisError("Missing Profile did to follow.");
+    }
 
     const { id } = await this.storage.createDocument({
       content: {
@@ -511,7 +556,9 @@ export class Orbis {
 
   async unfollow(did: DIDPkh) {
     this.requireSession([OrbisResources.storage]);
-    if (!did) throw new OrbisError("Missing Profile did to unfollow.");
+    if (!did) {
+      throw new OrbisError("Missing Profile did to unfollow.");
+    }
 
     const { id } = await this.storage.createDocument({
       content: {
@@ -538,6 +585,7 @@ export class Orbis {
       .from("orbis_v_followers")
       .select("details:did_following_details")
       .match({ did_followed: did, active: "true" });
+
     if (error || !data)
       throw new OrbisError(
         `Error fetching profile followers (${did}).`,
@@ -553,6 +601,7 @@ export class Orbis {
       .from("orbis_v_followers")
       .select("details:did_followed_details")
       .match({ did_following: did, active: "true" });
+
     if (error || !data)
       throw new OrbisError(
         `Error fetching profile following (${did}).`,
@@ -572,6 +621,7 @@ export class Orbis {
         did_followed: followingDid,
         active: "true",
       });
+
     if (error || !data)
       throw new OrbisError(
         `Error fetching profile following status (${profileDid}, ${followingDid}).`,
@@ -613,7 +663,7 @@ export class Orbis {
         this.encryption as IOrbisEncryptionClient
       ).encryptString({ string, encryptionRules });
       post.body = null;
-      post.encryptedBody = serializeEncryptedString(encrypted);
+      post.encryptedBody = serializeEncryptedContent(encrypted);
     }
 
     const { id } =
@@ -680,6 +730,7 @@ export class Orbis {
       .select()
       .eq("stream_id", postId)
       .single();
+
     if (error || !data)
       throw new OrbisError(
         `Error fetching post (${postId}).`,
@@ -841,7 +892,7 @@ export class Orbis {
 
     const [decryptedPost, error] = await catchError(() =>
       (this.encryption as IOrbisEncryptionClient).decryptString(
-        parseIndexedEncryptedString(encryptedBody)
+        parseIndexedEncryptedContent(encryptedBody)
       )
     );
 
@@ -868,7 +919,9 @@ export class Orbis {
 
   async react(postId: string, type: "haha" | "like" | "downvote" = "like") {
     this.requireSession([OrbisResources.storage]);
-    if (!postId) throw new OrbisError("postId cannot be empty.");
+    if (!postId) {
+      throw new OrbisError("postId cannot be empty.");
+    }
 
     const { id } = await this.storage.createDocument({
       content: {
@@ -896,6 +949,7 @@ export class Orbis {
       .select("type")
       .eq("post_id", postId)
       .eq("creator", did);
+
     if (error || !data)
       throw new OrbisError(
         `Error fetching reactions for post (${postId}).`,
@@ -960,7 +1014,7 @@ export class Orbis {
     ];
 
     if (conversation.name) {
-      conversation.encryptedName = serializeEncryptedString(
+      conversation.encryptedName = serializeEncryptedContent(
         await (this.encryption as IOrbisEncryptionClient).encryptString({
           string: conversation.name,
           encryptionRules,
@@ -971,7 +1025,7 @@ export class Orbis {
     }
 
     if (conversation.description) {
-      conversation.encryptedDescription = serializeEncryptedString(
+      conversation.encryptedDescription = serializeEncryptedContent(
         await (this.encryption as IOrbisEncryptionClient).encryptString({
           string: conversation.description,
           encryptionRules,
@@ -1028,6 +1082,7 @@ export class Orbis {
       .select()
       .eq("stream_id", conversationId)
       .single();
+
     if (error || !data)
       throw new OrbisError(
         `Error fetching conversation (${conversationId}).`,
@@ -1044,6 +1099,7 @@ export class Orbis {
       const [decryptedConversation, error] = await catchError(() =>
         this.decryptConversation(conversation)
       );
+
       if (error) {
         console.warn(error);
       } else {
@@ -1067,6 +1123,7 @@ export class Orbis {
       ? query.eq("context", params.context)
       : query
     ).order("last_message_timestamp", { ascending: false });
+
     if (error || !data)
       throw new OrbisError(
         `Error fetching conversations for user (${did}).`,
@@ -1079,12 +1136,13 @@ export class Orbis {
       params.decryptSilently === true;
 
     return await Promise.all(
-      data.map(async (v) => {
+      data.map(async (v: any) => {
         const conversation = formatConversation(v);
         if (decryptSilently) {
           const [decryptedConversation, error] = await catchError(() =>
             this.decryptConversation(conversation)
           );
+
           if (error) {
             console.warn(error);
           } else {
@@ -1106,7 +1164,7 @@ export class Orbis {
     if (encryptedName) {
       const [decryptedName, error] = await catchError(() =>
         (this.encryption as IOrbisEncryptionClient).decryptString(
-          parseIndexedEncryptedString(encryptedName)
+          parseIndexedEncryptedContent(encryptedName)
         )
       );
 
@@ -1121,7 +1179,7 @@ export class Orbis {
     if (encryptedDescription) {
       const [decryptedDescription, error] = await catchError(() =>
         (this.encryption as IOrbisEncryptionClient).decryptString(
-          parseIndexedEncryptedString(encryptedDescription)
+          parseIndexedEncryptedContent(encryptedDescription)
         )
       );
 
@@ -1195,7 +1253,7 @@ export class Orbis {
 
     const encryptedSocialMessage: SocialPrivateMessage = {
       conversation_id: conversationId,
-      encryptedMessage: serializeEncryptedString(encryptedContent),
+      encryptedMessage: serializeEncryptedContent(encryptedContent),
       data: message.data || {},
     };
 
@@ -1246,6 +1304,7 @@ export class Orbis {
       .select()
       .eq("stream_id", messageId)
       .single();
+
     if (error || !data)
       throw new OrbisError(
         `Error fetching message (${messageId}).`,
@@ -1263,6 +1322,7 @@ export class Orbis {
       const [decryptedMessage, error] = await catchError(() =>
         this.decryptMessage(message)
       );
+
       if (error) {
         console.warn(error);
       } else {
@@ -1289,6 +1349,7 @@ export class Orbis {
       .select()
       .eq("conversation_id", conversationId)
       .range(page * limit, (page + 1) * limit - 1);
+
     if (error || !data)
       throw new OrbisError(
         `Error fetching messages for conversation (${conversationId}).`,
@@ -1301,13 +1362,14 @@ export class Orbis {
       params.decryptSilently === true;
 
     return await Promise.all(
-      data.map(async (m) => {
+      data.map(async (m: any) => {
         const message = formatMessage(m);
 
         if (decryptSilently) {
           const [decryptedMessage, error] = await catchError(() =>
             this.decryptMessage(message)
           );
+
           if (error) {
             console.warn(error);
           } else {
@@ -1339,7 +1401,7 @@ export class Orbis {
 
     const [decryptedMessage, error] = await catchError(() =>
       (this.encryption as IOrbisEncryptionClient).decryptString(
-        parseIndexedEncryptedString(encryptedMessage)
+        parseIndexedEncryptedContent(encryptedMessage)
       )
     );
 
@@ -1633,6 +1695,7 @@ export class Orbis {
       .select()
       .eq("stream_id", contextId)
       .single();
+
     if (error || !data)
       throw new OrbisError(
         `Error fetching context (${contextId}).`,
@@ -1648,6 +1711,7 @@ export class Orbis {
       "get_contexts_with_children",
       { project_id: projectId }
     );
+
     if (error || !data)
       throw new OrbisError(
         `Error fetching contexts for project (${projectId}).`,
