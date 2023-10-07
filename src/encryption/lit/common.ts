@@ -1,4 +1,4 @@
-import { OrbisSession } from "../../types/auth.js";
+import { SiwxSession } from "../../types/auth.js";
 import { SupportedChains } from "../../index.js";
 import {
   OrbisEncryptionRules,
@@ -27,7 +27,7 @@ export class LitSession {
   address: string;
   chain: SupportedChains;
 
-  constructor(params: OrbisSession) {
+  constructor(params: SiwxSession) {
     const { siwx, chain } = params;
     this.derivedVia = derivationMethods[chain] || "unknown";
     this.sig = siwx.signature;

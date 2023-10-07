@@ -5,10 +5,12 @@ import { OrbisResources } from "./resources.js";
 import { DIDAny } from "./common.js";
 import { DID } from "dids";
 import { KeyDidSession } from "../auth/keyDid.js";
+import { DIDSession } from "did-session";
+import { LitSession } from "../encryption/index.js";
 
 export type AuthError = { error: string; details?: any };
 
-export type OrbisSession = {
+export type SiwxSession = {
   did: string;
   chain: SupportedChains;
   siwx: {
@@ -19,7 +21,24 @@ export type OrbisSession = {
   };
 };
 
+export type KeyDidAttestation = {
+  type: "keyDidSeed";
+  seed: string; // hexString
+};
+
+export type SiwxAttestation = {
+  type: "siwx";
+  siwx: SiwxSession["siwx"];
+};
+
+export type OrbisSession = {
+  authResource: Omit<AuthResource, "siwxResources">;
+  authAttestation: KeyDidAttestation | SiwxAttestation;
+  session: KeyDidSession | DIDSession | LitSession;
+};
+
 export type AuthResource = {
+  id: string;
   userFriendlyName: string;
   siwxResources: Array<string>;
   resourceType: OrbisResources;
@@ -46,7 +65,7 @@ export interface IOrbisAuth {
     resources,
     siwxOverwrites,
     params,
-  }: AuthOptions): Promise<OrbisSession>;
+  }: AuthOptions): Promise<SiwxSession>;
 }
 
 export interface IKeyDidAuth {

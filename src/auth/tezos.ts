@@ -4,7 +4,7 @@ import {
   AuthUserInformation,
   AuthOptions,
   IOrbisAuth,
-  OrbisSession,
+  SiwxSession,
 } from "../types/auth.js";
 import {
   ITezosProvider,
@@ -48,7 +48,7 @@ export class OrbisTezosAuth implements IOrbisAuth {
     resources,
     siwxOverwrites,
     params,
-  }: AuthOptions): Promise<OrbisSession> {
+  }: AuthOptions): Promise<SiwxSession> {
     await this.#provider.connect();
 
     const { did } = await this.getUserInformation();
@@ -59,6 +59,7 @@ export class OrbisTezosAuth implements IOrbisAuth {
       resources,
       siwxOverwrites,
     })) as SiwTezosMessage;
+
     const messageToSign = siwtMessage.signMessage();
 
     const signature = await this.#provider.signMessage(messageToSign);

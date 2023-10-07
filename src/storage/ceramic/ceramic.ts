@@ -17,6 +17,7 @@ import {
   AuthUserInformation,
   IKeyDidAuth,
   IOrbisAuth,
+  OrbisSession,
 } from "../../types/auth.js";
 import { KeyDidAuth, KeyDidSession } from "../../auth/keyDid.js";
 
@@ -77,7 +78,7 @@ export class CeramicStorage implements IOrbisStorage {
   }: {
     authenticator: IOrbisAuth | IKeyDidAuth;
     siwxOverwrites?: Partial<SiwxMessage>;
-  }): Promise<{ session: DIDSession | KeyDidSession }> {
+  }): Promise<OrbisSession> {
     if (
       !("authenticateSiwx" in authenticator) &&
       !("authenticateDid" in authenticator)
@@ -102,6 +103,15 @@ export class CeramicStorage implements IOrbisStorage {
       this.#user = userInformation;
 
       return {
+        authResource: {
+          id: this.id,
+          userFriendlyName: this.userFriendlyName,
+          resourceType: OrbisResources.storage,
+        },
+        authAttestation: {
+          type: "keyDidSeed",
+          seed: this.#session.seed,
+        },
         session: this.#session,
       };
     }
@@ -112,6 +122,7 @@ export class CeramicStorage implements IOrbisStorage {
     const session = await (authenticator as IOrbisAuth).authenticateSiwx({
       resources: [
         {
+          id: this.id,
           resourceType: OrbisResources.storage,
           userFriendlyName: this.userFriendlyName,
           siwxResources: this.siwxResources,
@@ -144,6 +155,15 @@ export class CeramicStorage implements IOrbisStorage {
     this.#user = userInformation;
 
     return {
+      authResource: {
+        id: this.id,
+        userFriendlyName: this.userFriendlyName,
+        resourceType: OrbisResources.storage,
+      },
+      authAttestation: {
+        type: "siwx",
+        siwx: session.siwx,
+      },
       session: this.#session,
     };
   }

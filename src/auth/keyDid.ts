@@ -73,7 +73,9 @@ export class KeyDidAuth implements IKeyDidAuth {
     return {
       did: this.#did.id as DIDAny,
       chain: this.chain,
-      metadata: {},
+      metadata: {
+        publicKey: this.#did.id.split(":").pop()
+      },
     };
   }
 

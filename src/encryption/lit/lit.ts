@@ -20,7 +20,11 @@ import {
 import { blobToBase64, base64ToBlob } from "../../util/conversion.js";
 import { UnifiedAccessControlConditions } from "@lit-protocol/types";
 import { OrbisError } from "../../util/results.js";
-import { AuthUserInformation, IOrbisAuth } from "../../types/auth.js";
+import {
+  AuthUserInformation,
+  IOrbisAuth,
+  OrbisSession,
+} from "../../types/auth.js";
 import { catchError } from "../../util/tryit.js";
 import { fromString, toString } from "uint8arrays";
 import { SiwxMessage } from "@didtools/cacao";
@@ -64,7 +68,7 @@ export class LitEncryptionClient implements IOrbisEncryptionClient {
   }: {
     authenticator: IOrbisAuth;
     siwxOverwrites?: Partial<SiwxMessage>;
-  }): Promise<any> {
+  }): Promise<OrbisSession> {
     if (!("authenticateSiwx" in authenticator)) {
       throw "Unsupported auth method, missing authenticateSiwx";
     }
@@ -81,6 +85,7 @@ export class LitEncryptionClient implements IOrbisEncryptionClient {
     const siwxSession = await authenticator.authenticateSiwx({
       resources: [
         {
+          id: this.id,
           resourceType: OrbisResources.encryption,
           userFriendlyName: this.userFriendlyName,
           siwxResources: this.siwxResources,
@@ -104,7 +109,18 @@ export class LitEncryptionClient implements IOrbisEncryptionClient {
     this.#session = session;
     this.#user = await authenticator.getUserInformation();
 
-    return { session };
+    return {
+      authResource: {
+        id: this.id,
+        userFriendlyName: this.userFriendlyName,
+        resourceType: OrbisResources.encryption,
+      },
+      authAttestation: {
+        type: "siwx",
+        siwx: siwxSession.siwx,
+      },
+      session: session,
+    };
   }
 
   async setSession({

@@ -4,7 +4,7 @@ import {
   AuthUserInformation,
   AuthOptions,
   IOrbisAuth,
-  OrbisSession,
+  SiwxSession,
 } from "../types/auth.js";
 import {
   IEVMProvider,
@@ -45,7 +45,7 @@ export class OrbisEVMAuth implements IOrbisAuth {
     resources,
     siwxOverwrites,
     params,
-  }: AuthOptions): Promise<OrbisSession> {
+  }: AuthOptions): Promise<SiwxSession> {
     await this.#provider.connect();
 
     const { did } = await this.getUserInformation();
@@ -56,6 +56,7 @@ export class OrbisEVMAuth implements IOrbisAuth {
       resources,
       siwxOverwrites,
     })) as SiweMessage;
+
     const messageToSign = siweMessage.signMessage();
 
     const signature = await this.#provider.signMessage(messageToSign);

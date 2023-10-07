@@ -4,7 +4,7 @@ import {
   AuthUserInformation,
   AuthOptions,
   IOrbisAuth,
-  OrbisSession,
+  SiwxSession,
 } from "../types/auth.js";
 import {
   ISolProvider,
@@ -46,7 +46,7 @@ export class OrbisSolanaAuth implements IOrbisAuth {
     resources,
     siwxOverwrites,
     params,
-  }: AuthOptions): Promise<OrbisSession> {
+  }: AuthOptions): Promise<SiwxSession> {
     await this.#provider.connect();
 
     const { did } = await this.getUserInformation();
@@ -57,6 +57,7 @@ export class OrbisSolanaAuth implements IOrbisAuth {
       resources,
       siwxOverwrites,
     })) as SiwsMessage;
+
     const messageToSign = siwsMessage.toMessage();
     const signature = await this.#provider.signMessage(messageToSign);
     siwsMessage.signature = signature;
