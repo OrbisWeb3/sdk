@@ -23,7 +23,9 @@ export const resolveMediaUrl = (
 ) => {
   const url = typeof media === "string" ? media : media.url;
   if (!url.startsWith("ipfs://")) {
-    if (typeof media === "string") return url;
+    if (typeof media === "string") {
+      return url;
+    }
     return media.resolvedUrl || url;
   }
 

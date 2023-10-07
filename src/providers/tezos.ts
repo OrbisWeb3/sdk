@@ -56,7 +56,9 @@ class OrbisTezosProvider implements IGenericSignerProvider {
       payload: message,
     });
 
-    if (typeof signature === "string") return signature;
+    if (typeof signature === "string") {
+      return signature;
+    }
     return signature.signature;
   }
 }

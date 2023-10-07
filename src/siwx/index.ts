@@ -42,13 +42,19 @@ export async function createOrbisSiwxMessage(
     siwxOpts.domain ||
     (typeof window !== "undefined" && window?.location?.host) ||
     "localhost";
-  if (!domain) throw 'No "domain" has been set';
+
+  if (!domain) {
+    throw 'No "domain" has been set';
+  }
 
   const uri =
     siwxOpts.uri ||
     (typeof window !== "undefined" && window?.location?.href) ||
     "http://localhost";
-  if (!uri) throw 'No "uri" has been set';
+
+  if (!uri) {
+    throw 'No "uri" has been set';
+  }
 
   const newSiwxOpts = {
     domain,

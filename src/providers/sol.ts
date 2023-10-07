@@ -25,7 +25,9 @@ class OrbisSolProvider implements IGenericSignerProvider {
 
   async getAddress(): Promise<string> {
     const publicKey = this.#provider.publicKey;
-    if (typeof publicKey === "string") return publicKey;
+    if (typeof publicKey === "string") {
+      return publicKey;
+    }
     return publicKey.toString();
   }
 

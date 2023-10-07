@@ -32,7 +32,9 @@
     "typecheck": "tsc --noEmit",
     "tsn": "ts-node-esm"
   },
-  "files": ["dist/*"],
+  "files": [
+    "dist/*"
+  ],
   "exports": {
     ".": "./dist/index.js",
     "./auth": "./dist/auth/index.js",

@@ -74,7 +74,10 @@ class OrbisEVMProvider implements IGenericSignerProvider {
     const accounts: string[] = await this.#provider.request({
       method: "eth_accounts",
     });
-    if (!accounts.length) throw "No eth accounts found";
+
+    if (!accounts.length) {
+      throw "No eth accounts found";
+    }
 
     return this.#checksumAddress(accounts[0]);
   }
@@ -82,7 +85,9 @@ class OrbisEVMProvider implements IGenericSignerProvider {
   async signMessage(message: string): Promise<string> {
     if (typeof this.#provider.signMessage === "function") {
       const signature = await this.#provider.signMessage(message);
-      if (typeof signature === "string") return signature;
+      if (typeof signature === "string") {
+        return signature;
+      }
       return signature.signature;
     }
 

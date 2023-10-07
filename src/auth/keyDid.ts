@@ -10,6 +10,7 @@ const hexToUint8Array = (hex: string) =>
       parseInt(h, 16)
     )
   );
+
 const toHexString = (bytes: Uint8Array) =>
   bytes.reduce((str, byte) => str + byte.toString(16).padStart(2, "0"), "");
 
@@ -50,7 +51,9 @@ export class KeyDidAuth implements IKeyDidAuth {
     const buffer = new Uint8Array(32);
     const seed = crypto.getRandomValues(buffer);
 
-    if (format === "uint8") return seed;
+    if (format === "uint8") {
+      return seed;
+    }
     return toHexString(seed);
   }
 
@@ -63,8 +66,7 @@ export class KeyDidAuth implements IKeyDidAuth {
     const parsedSeed = typeof seed === "string" ? hexToUint8Array(seed) : seed;
     const did = await createDIDKey(parsedSeed);
 
-    const keydid = new KeyDidAuth(did, parsedSeed);
-    return keydid;
+    return new KeyDidAuth(did, parsedSeed);
   }
 
   async getUserInformation(): Promise<AuthUserInformation> {
