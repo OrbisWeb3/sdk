@@ -37,6 +37,12 @@ export type OrbisSession = {
   session: KeyDidSession | DIDSession | LitSession;
 };
 
+export type SerializedOrbisSession = {
+  authResource: Omit<AuthResource, "siwxResources">;
+  authAttestation: KeyDidAttestation | SiwxAttestation;
+  session: string;
+};
+
 export type AuthResource = {
   id: string;
   userFriendlyName: string;

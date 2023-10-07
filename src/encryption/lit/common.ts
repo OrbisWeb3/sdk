@@ -36,23 +36,26 @@ export class LitSession {
     this.chain = chain;
   }
 
-  static fromSession(session: any) {
-    if (typeof session === "string") session = JSON.parse(session);
+  static fromSession(session: string) {
+    const parsedSession: any = JSON.parse(session);
 
     const chain = Object.entries(derivationMethods).find(
-      ([k, v]) => v === session.derivedVia
+      ([k, v]) => v === parsedSession.derivedVia
     );
+
     if (!chain?.length)
-      throw new OrbisError("Unknown derivation method " + session.derivedVia);
+      throw new OrbisError(
+        "Unknown derivation method " + parsedSession.derivedVia
+      );
 
     return new LitSession({
       did: "",
       chain: chain[0] as SupportedChains,
       siwx: {
-        serialized: session.signedMessage,
-        signature: session.sig,
+        serialized: parsedSession.signedMessage,
+        signature: parsedSession.sig,
         message: {
-          address: session.address,
+          address: parsedSession.address,
         } as SignedSiwxMessage,
         resources: [],
       },

@@ -24,6 +24,7 @@ import {
   AuthUserInformation,
   IOrbisAuth,
   OrbisSession,
+  SerializedOrbisSession,
 } from "../../types/auth.js";
 import { catchError } from "../../util/tryit.js";
 import { fromString, toString } from "uint8arrays";
@@ -37,15 +38,23 @@ export class LitEncryptionClient implements IOrbisEncryptionClient {
   siwxResources = [];
 
   #user?: AuthUserInformation;
-  #session?: LitSession;
+  #session?: OrbisSession & { session: LitSession };
   #client?: LitNodeClient;
 
   get user() {
     return this.#user;
   }
 
-  get session() {
-    return this.#session;
+  get session(): SerializedOrbisSession | false {
+    if (!this.#session) {
+      return false;
+    }
+
+    return {
+      authAttestation: this.#session?.authAttestation,
+      authResource: this.#session?.authResource,
+      session: this.#session?.session.serialize(),
+    };
   }
 
   async connect() {
@@ -106,10 +115,9 @@ export class LitEncryptionClient implements IOrbisEncryptionClient {
     }
 
     const session = new LitSession(siwxSession);
-    this.#session = session;
     this.#user = await authenticator.getUserInformation();
 
-    return {
+    this.#session = {
       authResource: {
         id: this.id,
         userFriendlyName: this.userFriendlyName,
@@ -121,6 +129,8 @@ export class LitEncryptionClient implements IOrbisEncryptionClient {
       },
       session: session,
     };
+
+    return this.#session;
   }
 
   async setSession({
@@ -128,26 +138,32 @@ export class LitEncryptionClient implements IOrbisEncryptionClient {
     session,
   }: {
     user: AuthUserInformation;
-    session: any;
+    session: SerializedOrbisSession;
   }): Promise<void> {
-    const _session = LitSession.fromSession(session);
+    const parsedSession = LitSession.fromSession(session.session);
 
     // In case of EVM it's safe to ignore checksum
     const addressMatch =
-      _session.chain === SupportedChains.ethereum
-        ? _session.address.toLowerCase() === user.metadata.address.toLowerCase()
-        : _session.address === user.metadata.address;
+      parsedSession.chain === SupportedChains.ethereum
+        ? parsedSession.address.toLowerCase() ===
+          user.metadata.address.toLowerCase()
+        : parsedSession.address === user.metadata.address;
 
     if (!addressMatch) {
       this.clearSession();
       throw new OrbisError("[Encryption:Lit] Session address mismatch", {
-        session: _session,
+        session: parsedSession,
         user,
       });
     }
 
-    this.#session = _session;
     this.#user = user;
+
+    this.#session = {
+      authAttestation: session.authAttestation,
+      authResource: session.authResource,
+      session: parsedSession,
+    };
   }
 
   async clearSession(): Promise<void> {
@@ -169,7 +185,7 @@ export class LitEncryptionClient implements IOrbisEncryptionClient {
     encryptionRules,
   }: EncryptStringParams): Promise<EncryptedString> {
     await this.connect();
-    if (!this.session) {
+    if (!this.#session) {
       throw new OrbisError(
         "[Encryption:Lit] Not authorized. You need to call IEncryptionClient.authorize() or Orbis.login()"
       );
@@ -180,9 +196,9 @@ export class LitEncryptionClient implements IOrbisEncryptionClient {
 
     const { symmetricKey, encryptedString } = await encryptString(string);
     const encryptedSymmetricKey = await this.#client?.saveEncryptionKey({
-      authSig: this.session,
+      authSig: this.#session.session,
       symmetricKey,
-      chain: this.session.chain,
+      chain: this.#session.session.chain,
       unifiedAccessControlConditions: accessConditions,
     });
 
@@ -207,7 +223,7 @@ export class LitEncryptionClient implements IOrbisEncryptionClient {
 
   async decryptString(encrypted: EncryptedString): Promise<DecryptedString> {
     await this.connect();
-    if (!this.session) {
+    if (!this.#session) {
       throw new OrbisError(
         "[Encryption:Lit] Not authorized. You need to call IEncryptionClient.authorize() or Orbis.login()"
       );
@@ -223,8 +239,8 @@ export class LitEncryptionClient implements IOrbisEncryptionClient {
       () =>
         this.#client?.getEncryptionKey({
           toDecrypt: encryptedSymmetricKey,
-          chain: this.session?.chain,
-          authSig: this.session,
+          chain: this.#session?.session.chain,
+          authSig: this.#session?.session,
           accessControlConditions: rules.evmEncryptionRules,
           solRpcConditions: rules.solEncryptionRules,
           unifiedAccessControlConditions: rules.encryptionRules,
@@ -261,7 +277,7 @@ export class LitEncryptionClient implements IOrbisEncryptionClient {
     encryptionRules,
   }: EncryptFileParams): Promise<EncryptedFile> {
     await this.connect();
-    if (!this.session) {
+    if (!this.#session) {
       throw new OrbisError(
         "[Encryption:Lit] Not authorized. You need to call IEncryptionClient.authorize() or Orbis.login()"
       );
@@ -272,9 +288,9 @@ export class LitEncryptionClient implements IOrbisEncryptionClient {
 
     const { symmetricKey, encryptedFile } = await encryptFile({ file });
     const encryptedSymmetricKey = await this.#client?.saveEncryptionKey({
-      authSig: this.session,
+      authSig: this.#session.session,
       symmetricKey,
-      chain: this.session.chain,
+      chain: this.#session.session.chain,
       unifiedAccessControlConditions: accessConditions,
     });
 
@@ -303,7 +319,7 @@ export class LitEncryptionClient implements IOrbisEncryptionClient {
 
   async decryptFile(encrypted: EncryptedFile): Promise<DecryptedFile> {
     await this.connect();
-    if (!this.session) {
+    if (!this.#session) {
       throw new OrbisError(
         "[Encryption:Lit] Not authorized. You need to call IEncryptionClient.authorize() or Orbis.login()"
       );
@@ -320,8 +336,8 @@ export class LitEncryptionClient implements IOrbisEncryptionClient {
       () =>
         this.#client?.getEncryptionKey({
           toDecrypt: encryptedSymmetricKey,
-          chain: this.session?.chain,
-          authSig: this.session,
+          chain: this.#session?.session.chain,
+          authSig: this.#session?.session,
           accessControlConditions: rules.evmEncryptionRules,
           solRpcConditions: rules.solEncryptionRules,
           unifiedAccessControlConditions: rules.encryptionRules,

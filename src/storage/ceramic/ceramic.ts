@@ -18,6 +18,7 @@ import {
   IKeyDidAuth,
   IOrbisAuth,
   OrbisSession,
+  SerializedOrbisSession,
 } from "../../types/auth.js";
 import { KeyDidAuth, KeyDidSession } from "../../auth/keyDid.js";
 
@@ -33,7 +34,7 @@ export class CeramicStorage implements IOrbisStorage {
 
   siwxResources = ["ceramic://*"];
 
-  #session?: DIDSession | KeyDidSession;
+  #session?: OrbisSession;
   #user?: AuthUserInformation;
   #client: CeramicClient;
 
@@ -49,8 +50,16 @@ export class CeramicStorage implements IOrbisStorage {
     return this.#user;
   }
 
-  get session() {
-    return this.#session;
+  get session(): SerializedOrbisSession | false {
+    if (!this.#session) {
+      return false;
+    }
+
+    return {
+      authAttestation: this.#session?.authAttestation,
+      authResource: this.#session?.authResource,
+      session: this.#session?.session.serialize(),
+    };
   }
 
   async connect(): Promise<void> {
@@ -98,11 +107,11 @@ export class CeramicStorage implements IOrbisStorage {
     if ("authenticateDid" in authenticator) {
       const { did, session } = await authenticator.authenticateDid();
 
-      this.#session = session;
+      const keyDidSession = session;
       this.#client.setDID(did);
       this.#user = userInformation;
 
-      return {
+      this.#session = {
         authResource: {
           id: this.id,
           userFriendlyName: this.userFriendlyName,
@@ -110,10 +119,12 @@ export class CeramicStorage implements IOrbisStorage {
         },
         authAttestation: {
           type: "keyDidSeed",
-          seed: this.#session.seed,
+          seed: keyDidSession.seed,
         },
-        session: this.#session,
+        session: keyDidSession,
       };
+
+      return this.#session;
     }
 
     const keySeed = randomBytes(32);
@@ -150,11 +161,11 @@ export class CeramicStorage implements IOrbisStorage {
     );
     const did = await createDIDCacao(didKey, cacao);
 
-    this.#session = new DIDSession({ keySeed, cacao, did });
-    this.#client.setDID(this.#session.did);
+    const didSession = new DIDSession({ keySeed, cacao, did });
+    this.#client.setDID(didSession.did);
     this.#user = userInformation;
 
-    return {
+    this.#session = {
       authResource: {
         id: this.id,
         userFriendlyName: this.userFriendlyName,
@@ -164,8 +175,10 @@ export class CeramicStorage implements IOrbisStorage {
         type: "siwx",
         siwx: session.siwx,
       },
-      session: this.#session,
+      session: didSession,
     };
+
+    return this.#session;
   }
 
   async setSession({
@@ -173,34 +186,50 @@ export class CeramicStorage implements IOrbisStorage {
     session,
   }: {
     user: AuthUserInformation;
-    session: any;
+    session: SerializedOrbisSession;
   }): Promise<void> {
-    if (session.startsWith("did:key:session:")) {
-      const keydid = await KeyDidAuth.fromSession(session);
+    const serializedSession = session.session;
+
+    if (session.authAttestation.type === "keyDidSeed") {
+      const keydid = await KeyDidAuth.fromSession(serializedSession);
       const keyUser = await keydid.getUserInformation();
       if (user.did !== keyUser.did) {
         this.clearSession();
         throw new OrbisError("did mismatch", { keyUser, user });
       }
 
-      const { session: _session, did } = await keydid.authenticateDid();
+      const { session: parsedSession, did } = await keydid.authenticateDid();
 
-      this.#session = _session;
       this.#client.setDID(did);
       this.#user = user;
+
+      this.#session = {
+        authAttestation: session.authAttestation,
+        authResource: session.authResource,
+        session: parsedSession,
+      };
+
       return;
     }
 
-    const _session = await DIDSession.fromSession(session);
+    const parsedSession = await DIDSession.fromSession(serializedSession);
 
-    if (_session.id !== user.did) {
+    if (parsedSession.id !== user.did) {
       this.clearSession();
-      throw new OrbisError("Session did mismatch", { session: _session, user });
+      throw new OrbisError("Session did mismatch", {
+        session: parsedSession,
+        user,
+      });
     }
 
-    this.#session = _session;
-    this.#client.setDID(this.#session.did);
+    this.#client.setDID(parsedSession.did);
     this.#user = user;
+
+    this.#session = {
+      authAttestation: session.authAttestation,
+      authResource: session.authResource,
+      session: parsedSession,
+    };
   }
 
   async clearSession(): Promise<void> {
