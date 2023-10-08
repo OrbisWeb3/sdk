@@ -140,6 +140,13 @@ export class LitEncryptionClient implements IOrbisEncryptionClient {
     user: AuthUserInformation;
     session: SerializedOrbisSession;
   }): Promise<void> {
+    if (session.authResource.id !== this.id) {
+      throw new OrbisError("Session authResource mismatch.", {
+        sessionAuthResource: session.authResource.id,
+        authResource: this.id,
+      });
+    }
+
     const parsedSession = LitSession.fromSession(session.session);
 
     // In case of EVM it's safe to ignore checksum

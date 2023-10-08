@@ -35,7 +35,7 @@ export class KeyDidSession {
   }
 }
 
-export class KeyDidAuth implements IKeyDidAuth {
+export class OrbisKeyDidAuth implements IKeyDidAuth {
   orbisAuthId: "ceramic-did" = "ceramic-did";
   chain = SupportedChains.ethereum;
 
@@ -66,7 +66,7 @@ export class KeyDidAuth implements IKeyDidAuth {
     const parsedSeed = typeof seed === "string" ? hexToUint8Array(seed) : seed;
     const did = await createDIDKey(parsedSeed);
 
-    return new KeyDidAuth(did, parsedSeed);
+    return new OrbisKeyDidAuth(did, parsedSeed);
   }
 
   async getUserInformation(): Promise<AuthUserInformation> {
@@ -74,7 +74,7 @@ export class KeyDidAuth implements IKeyDidAuth {
       did: this.#did.id as DIDAny,
       chain: this.chain,
       metadata: {
-        publicKey: this.#did.id.split(":").pop()
+        publicKey: this.#did.id.split(":").pop(),
       },
     };
   }

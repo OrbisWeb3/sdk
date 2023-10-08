@@ -20,7 +20,7 @@ import {
   OrbisSession,
   SerializedOrbisSession,
 } from "../../types/auth.js";
-import { KeyDidAuth, KeyDidSession } from "../../auth/keyDid.js";
+import { OrbisKeyDidAuth, KeyDidSession } from "../../auth/keyDid.js";
 
 export class CeramicStorage implements IOrbisStorage {
   id = "ceramic";
@@ -188,10 +188,17 @@ export class CeramicStorage implements IOrbisStorage {
     user: AuthUserInformation;
     session: SerializedOrbisSession;
   }): Promise<void> {
+    if (session.authResource.id !== this.id) {
+      throw new OrbisError("Session authResource mismatch.", {
+        sessionAuthResource: session.authResource.id,
+        authResource: this.id,
+      });
+    }
+
     const serializedSession = session.session;
 
     if (session.authAttestation.type === "keyDidSeed") {
-      const keydid = await KeyDidAuth.fromSession(serializedSession);
+      const keydid = await OrbisKeyDidAuth.fromSession(serializedSession);
       const keyUser = await keydid.getUserInformation();
       if (user.did !== keyUser.did) {
         this.clearSession();

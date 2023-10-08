@@ -31,6 +31,7 @@ import {
   IndexedContext,
   IndexedProject,
   IndexedNotification,
+  SerializedOrbisSession,
 } from "./types/index.js";
 import {
   IOrbisEncryptionClient,
@@ -101,16 +102,15 @@ export class Orbis {
 
   get sessions() {
     return {
-      [OrbisResources.encryption]:
-        (this.encryption && this.encryption.session) || false,
-      [OrbisResources.storage]: this.storage.session || false,
-    } as Record<OrbisResources, false | any>;
+      [OrbisResources.encryption]: this.encryption && this.encryption.session,
+      [OrbisResources.storage]: this.storage.session,
+    } as Record<OrbisResources, false | SerializedOrbisSession>;
   }
 
   get scopes() {
     return Object.keys(
       Object.fromEntries(
-        Object.entries(this.sessions).filter(([k, v]) => v !== false)
+        Object.entries(this.sessions).filter(([_, v]) => v !== false)
       )
     );
   }
@@ -173,23 +173,8 @@ export class Orbis {
       });
     }
 
-    const sessions = this.sessions;
-
     return JSON.stringify({
-      [OrbisResources.encryption]: {
-        ...((this.encryption &&
-          sessions[OrbisResources.encryption] && {
-            [this.encryption.id]:
-              sessions[OrbisResources.encryption].serialize(),
-          }) ||
-          {}),
-      },
-      [OrbisResources.storage]: {
-        ...((sessions[OrbisResources.storage] && {
-          [this.storage.id]: sessions[OrbisResources.storage].serialize(),
-        }) ||
-          {}),
-      },
+      ...this.sessions,
       userInformation: this.user,
     });
   }
@@ -312,11 +297,11 @@ export class Orbis {
     }
 
     const storageSession = parsed[OrbisResources.storage] || {};
-    if (storageSession[this.storage.id]) {
+    if (storageSession) {
       const [_, err] = await catchError(() =>
         this.storage.setSession({
           user,
-          session: storageSession[this.storage.id],
+          session: storageSession,
         })
       );
 
@@ -325,14 +310,12 @@ export class Orbis {
 
     const encryptionSession = parsed[OrbisResources.encryption] || {};
     if (this.encryption) {
-      if (encryptionSession[this.encryption.id]) {
-        const [_, err] = await catchError(
-          () =>
-            this.encryption &&
-            this.encryption.setSession({
-              user,
-              session: encryptionSession[this.encryption.id],
-            })
+      if (encryptionSession) {
+        const [_, err] = await catchError(() =>
+          (this.encryption as IOrbisEncryptionClient).setSession({
+            user,
+            session: encryptionSession,
+          })
         );
 
         if (err) console.warn(err);
@@ -343,10 +326,14 @@ export class Orbis {
     const successfulScopes = Object.entries(successfulSessions)
       .map(([k, v]) => v && k)
       .filter((v) => v) as Array<string>;
+
     if (!successfulScopes.length) {
-      throw new OrbisError("No sessions created.", {
-        sessions: successfulSessions,
-      });
+      console.warn(
+        new OrbisError("No sessions created.", {
+          sessions: successfulSessions,
+        })
+      );
+      return false;
     }
 
     this.user = user;
@@ -355,7 +342,7 @@ export class Orbis {
       await this.#serializeActiveSessions()
     );
 
-    return user && true;
+    return this.user && true;
   }
 
   async getConnectedUser(): Promise<OrbisConnectResult | false> {

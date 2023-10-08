@@ -1,5 +1,10 @@
 import { SupportedChains } from "./providers.js";
-import { IOrbisAuth, AuthUserInformation, IKeyDidAuth } from "./auth.js";
+import {
+  IOrbisAuth,
+  AuthUserInformation,
+  IKeyDidAuth,
+  SerializedOrbisSession,
+} from "./auth.js";
 import { SiwxMessage } from "@didtools/cacao";
 
 export enum OrbisResources {
@@ -13,7 +18,7 @@ export interface IAuthenticatedResource {
   supportedChains: Array<SupportedChains>;
 
   user?: AuthUserInformation;
-  session?: any;
+  session: SerializedOrbisSession | false;
 
   connect(params?: any): Promise<void>;
   authorize({
