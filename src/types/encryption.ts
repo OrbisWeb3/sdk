@@ -15,7 +15,7 @@ import {
 
 type StandardTokenEncryptionRule = {
   type: "token-gated";
-  chain: SupportedChains.ethereum | SupportedChains.solana;
+  chain: SupportedChains.evm | SupportedChains.solana;
   contractType: "ERC20" | "ERC721" | "SolanaContract";
   contractAddress: string;
   minTokenBalance: string;
@@ -23,7 +23,7 @@ type StandardTokenEncryptionRule = {
 
 type ERC1155EncryptionRule = {
   type: "token-gated";
-  chain: SupportedChains.ethereum;
+  chain: SupportedChains.evm;
   contractType: "ERC1155";
   contractAddress: string;
   minTokenBalance: string;

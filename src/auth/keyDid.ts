@@ -37,7 +37,7 @@ export class KeyDidSession {
 
 export class OrbisKeyDidAuth implements IKeyDidAuth {
   orbisAuthId: "ceramic-did" = "ceramic-did";
-  chain = SupportedChains.ethereum;
+  chain = SupportedChains.evm;
 
   #did: DID;
   #seed: Uint8Array;

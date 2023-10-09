@@ -26,7 +26,7 @@ export class CeramicStorage implements IOrbisStorage {
   id = "ceramic";
   userFriendlyName = "Ceramic Network";
   supportedChains = [
-    SupportedChains.ethereum,
+    SupportedChains.evm,
     SupportedChains.solana,
     SupportedChains.tezos,
     SupportedChains.stacks,
@@ -68,7 +68,7 @@ export class CeramicStorage implements IOrbisStorage {
 
   #cacaoFromMessage(message: SiwxMessage, chain: SupportedChains) {
     switch (chain) {
-      case SupportedChains.ethereum:
+      case SupportedChains.evm:
         return Cacao.fromSiweMessage(message as SiweMessage);
       case SupportedChains.solana:
         return Cacao.fromSiwsMessage(message as SiwsMessage);
@@ -142,7 +142,7 @@ export class CeramicStorage implements IOrbisStorage {
       siwxOverwrites: {
         ...siwxOverwrites,
         uri: didKey.id,
-        ...((userInformation.chain === SupportedChains.ethereum && {
+        ...((userInformation.chain === SupportedChains.evm && {
           address: userInformation.metadata.address.toLowerCase(),
         }) ||
           {}),

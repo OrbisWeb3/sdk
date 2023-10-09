@@ -22,7 +22,7 @@ export function normalizeProvider({
   }
 
   switch (chain) {
-    case SupportedChains.ethereum:
+    case SupportedChains.evm:
       return normalizeEVMProvider({ provider: provider as IEVMProvider });
     case SupportedChains.solana:
       return normalizeSolProvider({ provider: provider as ISolProvider });

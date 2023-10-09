@@ -978,16 +978,14 @@ export class Orbis {
       }
 
       if (
-        ![SupportedChains.ethereum, SupportedChains.solana].includes(
-          address.chain
-        )
+        ![SupportedChains.evm, SupportedChains.solana].includes(address.chain)
       ) {
         throw new OrbisError(
           "Error creating a conversation, invalid recipient chain.",
           {
             recipient: { did: recipient, ...address },
             recipients,
-            supportedChains: [SupportedChains.ethereum, SupportedChains.solana],
+            supportedChains: [SupportedChains.evm, SupportedChains.solana],
           }
         );
       }

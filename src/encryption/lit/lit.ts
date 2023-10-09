@@ -33,7 +33,7 @@ import { SiwxMessage } from "@didtools/cacao";
 export class LitEncryptionClient implements IOrbisEncryptionClient {
   id = "lit";
   userFriendlyName = "Lit Protocol";
-  supportedChains = [SupportedChains.ethereum, SupportedChains.solana];
+  supportedChains = [SupportedChains.evm, SupportedChains.solana];
 
   siwxResources = [];
 
@@ -151,7 +151,7 @@ export class LitEncryptionClient implements IOrbisEncryptionClient {
 
     // In case of EVM it's safe to ignore checksum
     const addressMatch =
-      parsedSession.chain === SupportedChains.ethereum
+      parsedSession.chain === SupportedChains.evm
         ? parsedSession.address.toLowerCase() ===
           user.metadata.address.toLowerCase()
         : parsedSession.address === user.metadata.address;

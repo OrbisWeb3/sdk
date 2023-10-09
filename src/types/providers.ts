@@ -1,5 +1,5 @@
 export enum SupportedChains {
-  ethereum = "ethereum",
+  evm = "ethereum",
   solana = "solana",
   stacks = "stacks",
   tezos = "tezos",

@@ -7,7 +7,7 @@ export const THREE_MONTHS = daysToMiliseconds(90);
 export const ONE_DAY = daysToMiliseconds(1);
 
 export const CHAIN_NAMESPACE_MAP = {
-  [SupportedChains.ethereum]: {
+  [SupportedChains.evm]: {
     namespace: "eip155",
     chainId: "1",
   },

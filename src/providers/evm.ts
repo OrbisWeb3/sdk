@@ -13,7 +13,7 @@ function uint8ToHex(uint8: Uint8Array) {
 
 class OrbisEVMProvider implements IGenericSignerProvider {
   readonly genericSignerId = "orbis-evm";
-  readonly chain = SupportedChains.ethereum;
+  readonly chain = SupportedChains.evm;
   #provider: IEVMProvider;
 
   constructor(provider: IEVMProvider) {

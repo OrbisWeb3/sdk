@@ -3,7 +3,7 @@ import { SupportedChains } from "../index.js";
 export type DIDAddress = { address: string; chain: SupportedChains };
 
 const namespaceToNetwork: Record<string, SupportedChains> = {
-  eip155: SupportedChains.ethereum,
+  eip155: SupportedChains.evm,
   solana: SupportedChains.solana,
   tezos: SupportedChains.tezos,
   stacks: SupportedChains.stacks,

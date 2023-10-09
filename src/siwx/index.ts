@@ -86,7 +86,7 @@ export function createSiwxMessage(
   const siwxOpts = params.siwxOpts;
 
   switch (chain) {
-    case SupportedChains.ethereum:
+    case SupportedChains.evm:
       // TODO: enable lowercased address if Lit supports it
       return new SiweMessage(siwxOpts);
     case SupportedChains.solana:

@@ -12,7 +12,7 @@
 // export class LitCloudEncryptionClient implements IOrbisEncryptionClient {
 //     id = "lit-cloud"
 //     userFriendlyName = "Cloud Lit Protocol"
-//     supportedChains = [SupportedChains.ethereum, SupportedChains.solana]
+//     supportedChains = [SupportedChains.evm, SupportedChains.solana]
 
 //     siwxResources = []
 

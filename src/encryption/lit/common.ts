@@ -16,7 +16,7 @@ import { OrbisError } from "../../util/results.js";
 import { SignedSiwxMessage } from "../../types/siwx.js";
 
 export const derivationMethods: Record<string, string> = {
-  [SupportedChains.ethereum]: "web3.eth.personal.sign",
+  [SupportedChains.evm]: "web3.eth.personal.sign",
   [SupportedChains.solana]: "solana.signMessage",
 };
 
