@@ -11,14 +11,14 @@ const hexToUint8Array = (hex: string) =>
     )
   );
 
-const toHexString = (bytes: Uint8Array) =>
+const uint8ArraytoHex = (bytes: Uint8Array) =>
   bytes.reduce((str, byte) => str + byte.toString(16).padStart(2, "0"), "");
 
 export class KeyDidSession {
   #seed: string;
 
   constructor(seed: Uint8Array | string) {
-    this.#seed = typeof seed === "string" ? seed : toHexString(seed);
+    this.#seed = typeof seed === "string" ? seed : uint8ArraytoHex(seed);
   }
 
   get seed() {
@@ -54,7 +54,7 @@ export class OrbisKeyDidAuth implements IKeyDidAuth {
     if (format === "uint8") {
       return seed;
     }
-    return toHexString(seed);
+    return uint8ArraytoHex(seed);
   }
 
   static async fromSession(session: string) {
