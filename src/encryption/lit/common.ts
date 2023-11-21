@@ -129,7 +129,7 @@ const generateTokenAccessControlCondition = (
       return {
         conditionType: "evmBasic",
         contractAddress: rule.contractAddress,
-        standardContractType: rule.type,
+        standardContractType: rule.contractType,
         chain: rule.chain,
         method: "balanceOf",
         parameters: [":userAddress", rule.tokenId],
@@ -143,7 +143,7 @@ const generateTokenAccessControlCondition = (
       return {
         conditionType: "evmBasic",
         contractAddress: rule.contractAddress,
-        standardContractType: rule.type,
+        standardContractType: rule.contractType,
         chain: rule.chain,
         method: "balanceOf",
         parameters: [":userAddress"],
@@ -200,3 +200,4 @@ export const parseOrbisRules = (
 
   return accessControlConditions;
 };
+
