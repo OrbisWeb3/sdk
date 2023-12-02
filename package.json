@@ -1,6 +1,6 @@
 {
   "name": "@orbisclub/sdk",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Orbis' Typescript SDK for building open-social experiences.",
   "keywords": [
     "web3",
