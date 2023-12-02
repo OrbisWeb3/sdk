@@ -21,9 +21,9 @@ As Orbis and its usage scaled, so did the demand for a better DX at scale. This 
 > [!IMPORTANT]
 > A complete migration guide will be provided together with other resources once this SDK reaches beta.
 
-We recognize the annoyance that is breaking backwards compatibility, however, in order to make the future of Orbis development simpler and leaner we had to do it.
+We recognize the annoyance of breaking backward compatibility, however, in order to make the future of Orbis development simpler and leaner we had to do it.
 
-Majority of functions are named the same, however, their signatures have changed.
+The majority of functions are named the same, however, their signatures have changed.
 
 > [!IMPORTANT]
 > Orbis TS SDK no longer provides errors as a response.
@@ -31,7 +31,7 @@ Majority of functions are named the same, however, their signatures have changed
 
 ## Sample usage
 
-Once the SDK is deemed finalized we will provide complete documentation rewrite.
+Once the SDK is deemed finalized we will provide a complete documentation rewrite.
 
 ### Initialize the SDK
 
@@ -56,7 +56,7 @@ const orbis = new Orbis({
 
 When using the new SDK you have 2 main options to catch errors.
 
-Third option is to not catch errors at all.
+The third option is to not catch errors at all.
 
 #### try / catch
 
@@ -94,7 +94,7 @@ console.log("Result", post)
 
 ### Connection
 
-Our SDK now export multiple Authentication providers. These replace the old `{ chain, provider }` methodology.
+Our SDK now exports multiple Authentication providers. These replace the old `{ chain, provider }` methodology.
 
 #### Scopes
 
@@ -134,18 +134,53 @@ console.log({ authResult })
 const authResult = await orbis.connectUser({ auth, scopes: [ OrbisResources.storage ]})
 ```
 
-### Indexing
+#### Check if a user is connected
 
-All methods which create or modify content, expose a `waitIndexing` method in their result. This allows you to guarantee Orbis' indexing nodes indexed and stored the new content.
-
-This has been done in order to allow quicker UI updates in case you don't care about the status of indexing or are handling multiple actions at once.
+This method always returns true/false.
 
 ```typescript
+// Check if any user is connected
+const connected = await orbis.isUserConnected()
+
+// Check if a user with the specified wallet address is connected
+const connected = await orbis.isUserConnected("0x00...")
+```
+
+#### Get the currently connected user
+
+This method either returns the currently connected user (`OrbisConnectResult`) or `false`.
+
+```typescript
+// Get the currently connected user
+const currentUser = await orbis.getConnectedUser()
+if(!currentUser){
+  // Notify the user or reconnect
+  throw "There is no active user session."
+}
+
+console.log({ currentUser })
+```
+
+### Indexing
+
+All methods that create or modify content, expose a `waitIndexing` method in their result. This allows you to guarantee Orbis' indexing nodes indexed and store the new content.
+
+This has been done to allow quicker UI updates in case you don't care about the status of indexing or are handling multiple actions at once.
+
+```typescript
+import { MethodStatuses } from "@orbisclub/sdk"
+
 // Create a stream
 const post = await orbis.createPost({ ... })
 
 // Wait for the stream to get indexed
-await post.waitIndexing()
+const postIndexingResult = await post.waitIndexing()
+// Alternatively you can check for the error field, as such: if ("error" in postIndexingResult)
+if(postIndexingResult.status !== MethodStatuses.ok){
+  throw `There was an error indexing post (${post.id}). Error: ${postIndexingResult.error}`
+}
+
+console.log(`Post (${post.id}) successfully indexed`, postIndexingResult.result)
 
 // Fetch the post from Orbis nodes
 const newPost = await orbis.getPost(post.id)
@@ -158,7 +193,7 @@ All Orbis Ceramic schemas are auto-generated as types. They are used when creati
 Indexed content has different types due to additional metadata, formatting and social graph additions.
 
 You can auto-generated schemas [here](/src/types/primitives/schemas.ts).\
-Index of our schema streams is [here](/src/types/primitives/index.ts).\
+The index of our schema streams is [here](/src/types/primitives/index.ts).\
 Indexed content types are [here](/src/types/primitives/indexed.ts).
 
 ### Posts
