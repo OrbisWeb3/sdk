@@ -1,5 +1,6 @@
 import { SupabaseClient, createClient } from "@supabase/supabase-js";
 import { MethodStatuses } from "../types/results.js";
+import { PriorityIndexingResult } from "../index.js";
 
 export class OrbisNodeClient {
   #client: SupabaseClient;
@@ -20,7 +21,7 @@ export class OrbisNodeClient {
     resource,
   }: {
     resource: { id: string; type: "profile" | "document" };
-  }) {
+  }): Promise<PriorityIndexingResult> {
     const url = `${this.#api}/index-${
       resource.type === "profile" ? "orbis-did" : "stream/mainnet"
     }/${resource.id}`;
@@ -47,11 +48,11 @@ export class OrbisNodeClient {
         error: indexingError || indexingResult || status,
         serverResponse,
       };
-    } catch (e) {
+    } catch (e: any) {
       return {
         status: MethodStatuses.genericError,
         serverResponse: null,
-        error: e,
+        error: e.message,
       };
     }
   }

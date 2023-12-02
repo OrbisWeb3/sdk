@@ -8,3 +8,4 @@ export * from "./auth.js";
 export * from "./common.js";
 export * from "./resources.js";
 export * from "./primitives/index.js";
+export * from "./indexer.js";

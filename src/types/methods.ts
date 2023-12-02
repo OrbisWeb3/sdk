@@ -3,6 +3,7 @@ import { AuthUserInformation, IKeyDidAuth, IOrbisAuth } from "./auth.js";
 import { OrbisResources } from "./resources.js";
 import { SupportedChains } from "./providers.js";
 import { DIDAny } from "./common.js";
+import { PriorityIndexingResult } from "./indexer.js";
 
 export type OrbisConnectParams = {
   auth: IOrbisAuth | IKeyDidAuth;
@@ -11,7 +12,7 @@ export type OrbisConnectParams = {
 };
 
 export type OrbisConnectResult = {
-  waitIndexing?: () => Promise<void>;
+  waitIndexing?: () => Promise<PriorityIndexingResult>;
   scopes: Array<string>;
   sessions: Record<OrbisResources, false | any>;
   user: AuthUserInformation;
