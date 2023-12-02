@@ -267,8 +267,20 @@ export class Orbis {
     this.#store.removeItem(LOCALSTORAGE_KEYS.session);
   }
 
-  async isUserConnected(): Promise<boolean> {
+  async isUserConnected(address?: string): Promise<boolean> {
     if (this.user) {
+      if (address) {
+        const userAddress = this.user.metadata.address;
+        if (!userAddress) {
+          return false;
+        }
+
+        if (this.user.chain === SupportedChains.evm) {
+          return userAddress.toLowerCase() === address.toLowerCase();
+        }
+
+        return userAddress === address;
+      }
       return true;
     }
 
@@ -342,7 +354,24 @@ export class Orbis {
       await this.#serializeActiveSessions()
     );
 
-    return this.user && true;
+    if (!this.user) {
+      return false;
+    }
+
+    if (address) {
+      const userAddress = this.user.metadata.address;
+      if (!userAddress) {
+        return false;
+      }
+
+      if (this.user.chain === SupportedChains.evm) {
+        return userAddress.toLowerCase() === address.toLowerCase();
+      }
+
+      return userAddress === address;
+    }
+
+    return true;
   }
 
   async getConnectedUser(): Promise<OrbisConnectResult | false> {
