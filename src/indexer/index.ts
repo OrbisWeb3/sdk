@@ -26,13 +26,31 @@ export class OrbisNodeClient {
     }/${resource.id}`;
     try {
       const result = await fetch(url);
+      const serverResponse = await result.json();
+
+      const {
+        status,
+        error: indexingError,
+        result: indexingResult,
+      } = serverResponse;
+
+      if (status === 200) {
+        return {
+          status: MethodStatuses.ok,
+          result: indexingResult,
+          serverResponse,
+        };
+      }
+
       return {
-        status: MethodStatuses.ok,
-        ...(await result.json()),
+        status: MethodStatuses.genericError,
+        error: indexingError || indexingResult || status,
+        serverResponse,
       };
     } catch (e) {
       return {
         status: MethodStatuses.genericError,
+        serverResponse: null,
         error: e,
       };
     }
